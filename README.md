@@ -177,7 +177,7 @@ For RVC, provide your own `.pth` and `.index` model paths in `config/notifu.sett
 ## Project Structure
 
 ```text
-assets/                 Mascot, expression, icon, and QRIS placeholder images
+assets/                 Mascot, expression, icon, and QRIS support images
 config/                 User-editable app settings
 docs/                   PRD and implementation notes
 scripts/                Install, run, test, speech, RVC, and asset scripts
@@ -186,17 +186,11 @@ src/                    PowerShell app, core logic, and WinForms UI
 
 ## Support Developer
 
-QRIS support is planned for the public repo. This checkout includes a clearly marked placeholder:
+Support the developer through the official QRIS poster below:
 
-![QRIS placeholder](assets/support-qris-placeholder.png)
+![Notifu support QRIS](assets/support-qris.png)
 
-Before a real release, replace it with the developer's official QRIS image at:
-
-```text
-assets/support-qris.png
-```
-
-Do not use the placeholder as a payment QR.
+Always verify the merchant name in your payment app before paying.
 
 ## Roadmap
 
