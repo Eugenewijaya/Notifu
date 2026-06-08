@@ -1,0 +1,93 @@
+{
+  "assistant": {
+    "userName": "Evid",
+    "persona": "asisten notifikasi pribadi yang hangat, playful, sedikit centil, agak ceroboh, dan anime-inspired original"
+  },
+  "listener": {
+    "pollSeconds": 3,
+    "dedupeMinutes": 30,
+    "popupCooldownSeconds": 12,
+    "ignoreExistingOnStartup": true
+  },
+  "whatsapp": {
+    "appNameContains": [
+      "WhatsApp",
+      "WhatsApp Desktop"
+    ]
+  },
+  "notifications": {
+    "mode": "all",
+    "allowAppNameContains": [
+      "WhatsApp",
+      "WhatsApp Desktop"
+    ],
+    "blockAppNameContains": [
+      "Notifu"
+    ]
+  },
+  "privacy": {
+    "readMessageBody": true,
+    "storeHistory": false
+  },
+  "ui": {
+    "showTrayIcon": true,
+    "useCustomPopup": true,
+    "enableDesktopPet": true,
+    "popupDurationSeconds": 16,
+    "avatarImagePath": "assets\\notifu-expression-happy.png",
+    "appIconPath": "assets\\notifu-app-icon.ico",
+    "popupWidth": 500,
+    "popupHeight": 205,
+    "petSize": 112,
+    "expressionImages": {
+      "happy": "assets\\notifu-expression-happy.png",
+      "talking": "assets\\notifu-expression-talking.png",
+      "curious": "assets\\notifu-expression-curious.png",
+      "focused": "assets\\notifu-expression-focused.png",
+      "worried": "assets\\notifu-expression-worried.png",
+      "sleepy": "assets\\notifu-expression-sleepy.png"
+    }
+  },
+  "ai": {
+    "enabled": true,
+    "model": "gpt-4o-mini",
+    "timeoutSeconds": 30
+  },
+  "voice": {
+    "enabled": true,
+    "provider": "rvc",
+    "preferFemale": true,
+    "localVoiceName": "",
+    "localRate": 2,
+    "volume": 100,
+    "chimeBeforeSpeech": true,
+    "openAiTtsModel": "gpt-4o-mini-tts",
+    "openAiVoice": "coral",
+    "openAiInstructions": "Bicara dalam Bahasa Indonesia dengan suara perempuan muda yang ceria, lembut, playful, sedikit centil, agak ceroboh, dan anime-inspired original. Jangan meniru karakter, aktor suara, orang nyata, atau IP tertentu. Intonasi ramah, natural, adaptif, tidak robotik, tidak berlebihan, dan jelas."
+  },
+  "voiceCommands": {
+    "enabled": true,
+    "culture": "id-ID",
+    "listenTimeoutSeconds": 6,
+    "wakeMode": "button"
+  },
+  "rvc": {
+    "modelPath": "C:\\Users\\User\\Documents\\kobo voice model\\kobo\\kobov2.pth",
+    "indexPath": "C:\\Users\\User\\Documents\\kobo voice model\\kobo\\added_IVF454_Flat_nprobe_1_kobov2_v2.index",
+    "command": "",
+    "pitch": 0,
+    "timeoutSeconds": 240,
+    "pythonPath": ".venv-rvc\\Scripts\\python.exe",
+    "wrapperScript": "scripts\\notifu_rvc.py",
+    "baseVoice": "id-ID-GadisNeural",
+    "device": "cpu:0",
+    "method": "pm",
+    "version": "v2",
+    "indexRate": 0.6,
+    "filterRadius": 3,
+    "resampleSr": 0,
+    "rmsMixRate": 0.25,
+    "protect": 0.5,
+    "minOutputBytes": 2048
+  }
+}
