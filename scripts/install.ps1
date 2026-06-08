@@ -14,17 +14,18 @@ $iconLocation = if (Test-Path -LiteralPath $iconPath) { $iconPath } else { "$env
 if (-not $NoShortcut) {
     $shell = New-Object -ComObject WScript.Shell
     $shortcutTargets = @(
-        @{ Path = (Join-Path ([Environment]::GetFolderPath("Desktop")) "Notifu.lnk"); Script = $runScript; Description = "Notifu AI notification assistant" },
-        @{ Path = (Join-Path ([Environment]::GetFolderPath("Programs")) "Notifu.lnk"); Script = $runScript; Description = "Notifu AI notification assistant" },
-        @{ Path = (Join-Path ([Environment]::GetFolderPath("Desktop")) "Notifu Settings.lnk"); Script = $settingsScript; Description = "Notifu settings" },
-        @{ Path = (Join-Path ([Environment]::GetFolderPath("Programs")) "Notifu Settings.lnk"); Script = $settingsScript; Description = "Notifu settings" }
+        @{ Path = (Join-Path ([Environment]::GetFolderPath("Desktop")) "Notifu.lnk"); Script = $runScript; Description = "Notifu AI notification assistant"; Hidden = $true },
+        @{ Path = (Join-Path ([Environment]::GetFolderPath("Programs")) "Notifu.lnk"); Script = $runScript; Description = "Notifu AI notification assistant"; Hidden = $true },
+        @{ Path = (Join-Path ([Environment]::GetFolderPath("Desktop")) "Notifu Settings.lnk"); Script = $settingsScript; Description = "Notifu settings"; Hidden = $true },
+        @{ Path = (Join-Path ([Environment]::GetFolderPath("Programs")) "Notifu Settings.lnk"); Script = $settingsScript; Description = "Notifu settings"; Hidden = $true }
     )
 
     foreach ($target in $shortcutTargets) {
         $shortcutPath = $target.Path
         $shortcut = $shell.CreateShortcut($shortcutPath)
         $shortcut.TargetPath = $powershell
-        $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$($target.Script)`""
+        $windowArg = if ($target.Hidden) { "-WindowStyle Hidden " } else { "" }
+        $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass $windowArg-File `"$($target.Script)`""
         $shortcut.WorkingDirectory = $root
         $shortcut.IconLocation = $iconLocation
         $shortcut.Description = $target.Description

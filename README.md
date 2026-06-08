@@ -98,6 +98,14 @@ Uninstall shortcuts and startup entry:
 powershell -ExecutionPolicy Bypass -File .\scripts\uninstall.ps1
 ```
 
+Fully stop Notifu and all speech/RVC workers:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\stop.ps1
+```
+
+Notifu also provides `Matikan Notifu` in the tray menu and Settings window. Only one main Notifu instance can run at a time.
+
 ## Test
 
 Check notification listener access and current Notification Center items:

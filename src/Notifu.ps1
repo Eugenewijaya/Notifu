@@ -12,6 +12,14 @@ $uiModulePath = Join-Path $PSScriptRoot "Notifu.UI.psm1"
 Import-Module $modulePath -Force
 Import-Module $uiModulePath -Force
 
+function Release-NotifuInstanceMutex {
+    if ($script:instanceMutex) {
+        try { $script:instanceMutex.ReleaseMutex() } catch {}
+        try { $script:instanceMutex.Dispose() } catch {}
+        $script:instanceMutex = $null
+    }
+}
+
 if ($ListVoices) {
     Get-NotifuInstalledVoices | Format-Table -AutoSize
     return
@@ -32,6 +40,14 @@ $script:settings = Get-NotifuSettings -Path $settingsPath
 
 if ($OpenSettings) {
     Show-NotifuSettingsWindow -SettingsPath $settingsPath
+    return
+}
+
+$createdNew = $false
+$script:instanceMutex = New-Object System.Threading.Mutex($true, "Local\Notifu-Notification-Assistant", [ref]$createdNew)
+if (-not $createdNew) {
+    try { $script:instanceMutex.Dispose() } catch {}
+    Write-NotifuLog -Level "warn" -Message "Notifu start skipped because another instance is already running."
     return
 }
 
@@ -325,10 +341,21 @@ $logItem.Add_Click({
 [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
 $exitItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$exitItem.Text = "Exit"
+$exitItem.Text = "Matikan Notifu"
 $exitItem.Add_Click({
     $script:trayIcon.Visible = $false
     $script:trayIcon.Dispose()
+    try {
+        $stopScript = Join-Path $root "scripts\stop.ps1"
+        $powershellPath = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+        Start-Process `
+            -FilePath $powershellPath `
+            -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", "`"$stopScript`"", "-Silent") `
+            -WindowStyle Hidden | Out-Null
+    } catch {
+        Write-NotifuLog -Level "warn" -Message "Unable to launch shutdown helper: $($_.Exception.Message)"
+    }
+    Release-NotifuInstanceMutex
     [System.Windows.Forms.Application]::Exit()
 })
 [void]$menu.Items.Add($exitItem)
@@ -351,4 +378,7 @@ $timer.Start()
 
 Invoke-NotifuNotificationCycle
 Write-NotifuLog -Message "Notifu tray app started."
+[System.Windows.Forms.Application]::add_ApplicationExit({
+    Release-NotifuInstanceMutex
+})
 [System.Windows.Forms.Application]::Run()

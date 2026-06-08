@@ -851,7 +851,7 @@ function Show-NotifuSettingsWindow {
         $tmp.rvc.command = $rvcCommand.Text
         $tmp.rvc.baseVoice = $baseVoice.Text
         $tmp.rvc.pitch = [int]$pitch.Value
-        Invoke-NotifuSpeech -Text "Halo Evid, ini suara test Notifu." -Settings $tmp
+        Invoke-NotifuSpeech -Text "Halo Evid, ini suara test Notifu." -Settings $tmp -Async
     })
     $rvc.Controls.Add($testRvc)
 
@@ -885,6 +885,46 @@ function Show-NotifuSettingsWindow {
     $cancel.Size = New-Object System.Drawing.Size 88, 34
     $cancel.Add_Click({ $form.Close() })
     $form.Controls.Add($cancel)
+
+    $shutdown = New-Object System.Windows.Forms.Button
+    $shutdown.Text = "Matikan Notifu"
+    $shutdown.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left
+    $shutdown.Location = New-Object System.Drawing.Point 22, 478
+    $shutdown.Size = New-Object System.Drawing.Size 132, 34
+    $shutdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $shutdown.BackColor = [System.Drawing.Color]::FromArgb(190, 55, 65)
+    $shutdown.ForeColor = [System.Drawing.Color]::White
+    $shutdown.Add_Click({
+        $answer = [System.Windows.Forms.MessageBox]::Show(
+            "Matikan Notifu beserta worker suara yang sedang berjalan?",
+            "Matikan Notifu",
+            [System.Windows.Forms.MessageBoxButtons]::YesNo,
+            [System.Windows.Forms.MessageBoxIcon]::Warning
+        )
+
+        if ($answer -ne [System.Windows.Forms.DialogResult]::Yes) {
+            return
+        }
+
+        try {
+            $root = Split-Path -Parent $PSScriptRoot
+            $stopScript = Join-Path $root "scripts\stop.ps1"
+            $powershellPath = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+            Start-Process `
+                -FilePath $powershellPath `
+                -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", "`"$stopScript`"", "-Silent") `
+                -WindowStyle Hidden | Out-Null
+            $form.Close()
+        } catch {
+            [System.Windows.Forms.MessageBox]::Show(
+                "Notifu gagal dimatikan: $($_.Exception.Message)",
+                "Notifu",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Error
+            ) | Out-Null
+        }
+    })
+    $form.Controls.Add($shutdown)
 
     $save.Add_Click({
         Ensure-SettingProperty $settings "notifications" ([pscustomobject]@{})

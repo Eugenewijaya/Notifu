@@ -5,6 +5,7 @@ param(
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
+& (Join-Path $root "scripts\stop.ps1") -Silent
 & (Join-Path $root "scripts\uninstall-startup.ps1") -Silent
 
 $shortcutTargets = @(
