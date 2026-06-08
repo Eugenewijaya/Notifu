@@ -44,6 +44,7 @@ $state = [ordered]@{
     LatestAnalysis = $null
     LatestVoiceCommand = $null
     Paused = $false
+    VoiceMuted = $false
     LastPopupAt = $null
 }
 
@@ -87,16 +88,34 @@ function Set-NotifuClipboard {
     }
 }
 
+function Invoke-NotifuAppSpeech {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+
+        [switch]$Async,
+
+        [switch]$Force
+    )
+
+    if ($state.VoiceMuted -and -not $Force) {
+        Write-NotifuLog -Message "Speech skipped because voice is muted."
+        return
+    }
+
+    Invoke-NotifuSpeech -Text $Text -Settings $script:settings -Async:$Async
+}
+
 function Invoke-NotifuVoiceCommandFromContext {
     try {
         $listenResult = Read-NotifuVoiceCommand -Settings $script:settings
         if ($listenResult.Status -eq "disabled") {
-            Invoke-NotifuSpeech -Text "Voice command belum aktif di settings." -Settings $script:settings -Async
+            Invoke-NotifuAppSpeech -Text "Voice command belum aktif di settings." -Async -Force
             return
         }
 
         if ($listenResult.Status -ne "ok" -or -not $listenResult.Text) {
-            Invoke-NotifuSpeech -Text "Aku belum menangkap perintahnya. Coba tekan voice lagi dan bicara sedikit lebih jelas." -Settings $script:settings -Async
+            Invoke-NotifuAppSpeech -Text "Aku belum menangkap perintahnya. Coba tekan voice lagi dan bicara sedikit lebih jelas." -Async -Force
             return
         }
 
@@ -129,6 +148,16 @@ function Invoke-NotifuVoiceCommandFromContext {
             "dismiss" {
                 Close-NotifuAssistantPopup
             }
+            "hide_pet" {
+                Set-NotifuDesktopPetVisible -Visible $false
+            }
+            "show_pet" {
+                [void](Show-NotifuDesktopPet -Settings $script:settings)
+                Set-NotifuDesktopPetVisible -Visible $true
+            }
+            "voice_on" {
+                $state.VoiceMuted = $false
+            }
         }
 
         if ($action.Response) {
@@ -136,11 +165,15 @@ function Invoke-NotifuVoiceCommandFromContext {
                 Set-NotifuDesktopPetBubble -Text $action.Response -Expression "talking" -Settings $script:settings
             } catch {}
 
-            Invoke-NotifuSpeech -Text $action.Response -Settings $script:settings -Async
+            Invoke-NotifuAppSpeech -Text $action.Response -Async -Force
+        }
+
+        if ($action.Action -eq "voice_off") {
+            $state.VoiceMuted = $true
         }
     } catch {
         Write-NotifuLog -Level "error" -Message "Voice command action failed: $($_.Exception.Message)"
-        Invoke-NotifuSpeech -Text "Aduh, voice command-ku kepeleset error. Detailnya sudah aku tulis di log." -Settings $script:settings -Async
+        Invoke-NotifuAppSpeech -Text "Aduh, voice command-ku kepeleset error. Detailnya sudah aku tulis di log." -Async -Force
     }
 }
 
@@ -189,7 +222,7 @@ function Invoke-NotifuNotificationCycle {
                     } `
                     -OnSpeakAgain {
                         if ($state.LatestAnalysis -and $state.LatestAnalysis.announcement) {
-                            Invoke-NotifuSpeech -Text $state.LatestAnalysis.announcement -Settings $script:settings -Async
+                            Invoke-NotifuAppSpeech -Text $state.LatestAnalysis.announcement -Async
                         }
                     } `
                     -OnVoiceCommand { Invoke-NotifuVoiceCommandFromContext })
@@ -201,7 +234,7 @@ function Invoke-NotifuNotificationCycle {
                 Write-NotifuLog -Level "warn" -Message "Desktop pet bubble failed: $($_.Exception.Message)"
             }
 
-            Invoke-NotifuSpeech -Text $analysis.announcement -Settings $script:settings -Async
+            Invoke-NotifuAppSpeech -Text $analysis.announcement -Async
 
             $dedupeCutoff = (Get-Date).AddMinutes(-1 * [double]$script:settings.listener.dedupeMinutes)
             $oldKeys = @($state.Seen.GetEnumerator() | Where-Object { [datetime]$_.Value -lt $dedupeCutoff } | Select-Object -ExpandProperty Key)
@@ -259,7 +292,7 @@ $speakAgainItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $speakAgainItem.Text = "Bacakan ulang terakhir"
 $speakAgainItem.Add_Click({
     if ($state.LatestAnalysis -and $state.LatestAnalysis.announcement) {
-        Invoke-NotifuSpeech -Text $state.LatestAnalysis.announcement -Settings $script:settings -Async
+        Invoke-NotifuAppSpeech -Text $state.LatestAnalysis.announcement -Async
     }
 })
 [void]$menu.Items.Add($speakAgainItem)
@@ -305,7 +338,7 @@ $script:trayIcon.Add_DoubleClick({ [void](Open-NotifuNotificationApp -Notificati
 
 try {
     if ($script:settings.ui.enableDesktopPet) {
-        [void](Show-NotifuDesktopPet -Settings $script:settings -OnClick { Invoke-NotifuVoiceCommandFromContext })
+        [void](Show-NotifuDesktopPet -Settings $script:settings)
     }
 } catch {
     Write-NotifuLog -Level "warn" -Message "Desktop pet failed to start: $($_.Exception.Message)"

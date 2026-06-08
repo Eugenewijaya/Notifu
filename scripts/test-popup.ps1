@@ -28,7 +28,7 @@ $popup = Show-NotifuAssistantPopup `
     -OnVoiceCommand { Invoke-NotifuSpeech -Text "Aku dengar, tapi ini cuma test popup." -Settings $settings -Async } `
     -NoShow
 
-[void](Show-NotifuDesktopPet -Settings $settings -OnClick { Invoke-NotifuSpeech -Text "Pet Notifu aktif." -Settings $settings -Async })
+[void](Show-NotifuDesktopPet -Settings $settings)
 Set-NotifuDesktopPetBubble -Text $analysis.announcement -Expression $analysis.expression -Settings $settings
 
 Invoke-NotifuSpeech -Text $analysis.announcement -Settings $settings -Async

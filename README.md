@@ -12,10 +12,12 @@ The current build is a PowerShell MVP so it can run on Windows without .NET SDK,
 - Supports all incoming notification apps by default, with allow/block list settings.
 - Shows a custom floating popup, not a normal Windows balloon notification.
 - Popup slides in from the right, uses typewriter text, and has cute chat-bubble styling.
-- Desktop pet walks at the bottom of the screen and shows bubble replies in real time.
+- Tiny full-body desktop pet walks at the bottom of the screen and can be dragged around.
 - Character expression changes by notification context: happy, talking, curious, focused, worried, sleepy.
-- Speaks announcements through local Windows voice, OpenAI TTS, or a user-supplied RVC voice-conversion model.
+- Speaks announcements through a single speech queue so voices do not overlap.
+- Default voice mode is RVC-only with a user-supplied voice-conversion model.
 - Voice command is opt-in by button/menu click, not always-on microphone recording.
+- Voice commands use the wake phrase `halo notifu`.
 - AI mode can use OpenAI Responses API when the user provides an API key.
 - Local heuristic fallback still works without any cloud key.
 - Quick actions: open source app, copy draft reply, repeat announcement, pause/resume, dismiss bubble.
@@ -154,7 +156,7 @@ Read only specific apps:
 
 ## AI And Voice
 
-Without an API key, Notifu uses local rules and Windows voice.
+Without an API key, Notifu uses local rules. The default voice provider is `rvc`, and `rvcOnly` suppresses local voice fallback so the app does not suddenly switch to a different speaker.
 
 To enable cloud AI and natural TTS, create `.env.local` in the project root:
 
@@ -173,6 +175,31 @@ Then choose a provider in settings:
 ```
 
 For RVC, provide your own `.pth` and `.index` model paths in `config/notifu.settings.json`. Model files are intentionally not committed.
+
+## Voice Commands
+
+Click the tray menu item `Dengarkan voice command`, then start with:
+
+```text
+halo notifu
+```
+
+Supported local commands:
+
+```text
+halo notifu hide
+halo notifu show
+halo notifu off
+halo notifu on
+halo notifu status
+halo notifu ulangi
+halo notifu buka
+halo notifu salin
+halo notifu pause
+halo notifu resume
+```
+
+The desktop pet itself does not start voice command. Drag it with the mouse to move it.
 
 ## Project Structure
 

@@ -189,40 +189,6 @@ function Save-Icon {
     }
 }
 
-function Save-QrisPlaceholder {
-    $path = Join-Path $OutputDir "support-qris-placeholder.png"
-    $bitmap = New-Object System.Drawing.Bitmap 640, 640, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
-    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-    $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-    $graphics.Clear([System.Drawing.Color]::White)
-    $black = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(255, 34, 34, 34))
-    $gray = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(255, 240, 240, 240))
-    $font = New-Object System.Drawing.Font "Segoe UI Semibold", 24
-    $smallFont = New-Object System.Drawing.Font "Segoe UI", 14
-
-    $graphics.DrawString("QRIS support placeholder", $font, $black, 80, 36)
-    $graphics.DrawString("Replace this PNG with the developer's official QRIS before release.", $smallFont, $black, 64, 84)
-    $graphics.FillRectangle($gray, 120, 150, 400, 400)
-
-    for ($row = 0; $row -lt 25; $row++) {
-        for ($col = 0; $col -lt 25; $col++) {
-            $draw = (($row * 17 + $col * 31 + ($row * $col)) % 7) -in @(0, 2, 5)
-            if ($draw) {
-                $graphics.FillRectangle($black, 132 + ($col * 15), 162 + ($row * 15), 13, 13)
-            }
-        }
-    }
-
-    $graphics.DrawString("NOT AN ACTIVE PAYMENT QR", $font, $black, 118, 570)
-    $font.Dispose()
-    $smallFont.Dispose()
-    $black.Dispose()
-    $gray.Dispose()
-    $graphics.Dispose()
-    Save-Png -Image $bitmap -Path $path
-    $bitmap.Dispose()
-}
-
 $baseImage = [System.Drawing.Bitmap]::FromFile($BaseAvatarPath)
 try {
     Save-Expression -Base $baseImage -Name "happy" -Draw { param($g, $w, $h) Draw-Smile -Graphics $g -Width $w -Height $h }
@@ -232,7 +198,6 @@ try {
     Save-Expression -Base $baseImage -Name "worried" -Draw { param($g, $w, $h) Draw-FlatMouth -Graphics $g -Width $w -Height $h; Draw-SweatDrop -Graphics $g -Width $w -Height $h }
     Save-Expression -Base $baseImage -Name "sleepy" -Draw { param($g, $w, $h) Draw-Smile -Graphics $g -Width $w -Height $h; Draw-ClosedEyes -Graphics $g -Width $w -Height $h }
     Save-Icon -Base $baseImage
-    Save-QrisPlaceholder
 } finally {
     $baseImage.Dispose()
 }

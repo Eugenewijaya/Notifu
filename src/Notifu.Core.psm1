@@ -444,38 +444,6 @@ function Invoke-NotifuRvcSpeech {
         return $false
     }
 
-    if ($Async) {
-        $root = Split-Path -Parent $PSScriptRoot
-        $audioDir = Join-Path $root "logs\audio"
-        if (-not (Test-Path -LiteralPath $audioDir)) {
-            New-Item -ItemType Directory -Force -Path $audioDir | Out-Null
-        }
-
-        $id = [Guid]::NewGuid().ToString("N")
-        $textFile = Join-Path $audioDir "notifu-async-$id.txt"
-        $workerScript = Join-Path $root "scripts\speak-text.ps1"
-        $settingsPath = Join-Path $root "config\notifu.settings.json"
-        $powershellPath = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
-
-        if (-not (Test-Path -LiteralPath $workerScript)) {
-            Write-NotifuLog -Level "warn" -Message "Async RVC worker not found: $workerScript"
-            return $false
-        }
-
-        Set-Content -LiteralPath $textFile -Value $Text -Encoding UTF8
-        $workerArgs = @(
-            "-NoProfile",
-            "-ExecutionPolicy", "Bypass",
-            "-File", $workerScript,
-            "-TextFile", $textFile,
-            "-SettingsPath", $settingsPath
-        )
-        $workerArgumentString = ($workerArgs | ForEach-Object { ConvertTo-NotifuProcessArgument -Value ([string]$_) }) -join " "
-        Start-Process -FilePath $powershellPath -ArgumentList $workerArgumentString -WindowStyle Hidden | Out-Null
-        Write-NotifuLog -Message "RVC speech queued in background."
-        return $true
-    }
-
     $modelPath = [string](Get-NotifuObjectValue -Object $rvcSettings -Name "modelPath" -Default "")
     $indexPath = [string](Get-NotifuObjectValue -Object $rvcSettings -Name "indexPath" -Default "")
     $commandOverride = [string](Get-NotifuObjectValue -Object $rvcSettings -Name "command" -Default "")
@@ -939,11 +907,74 @@ function Get-NotifuVoiceCommandAction {
     $text = $CommandText.Trim()
     $lower = $text.ToLowerInvariant()
     $userName = [string]$Settings.assistant.userName
+    $voiceCommandSettings = Get-NotifuObjectValue -Object $Settings -Name "voiceCommands" -Default $null
+    $wakePhrase = ([string](Get-NotifuObjectValue -Object $voiceCommandSettings -Name "wakePhrase" -Default "halo notifu")).ToLowerInvariant()
 
     if (-not $text) {
         return [pscustomobject]@{
             Action = "none"
             Response = "Aku belum dengar apa-apa. Coba ulangi pelan-pelan ya."
+            DraftReply = ""
+        }
+    }
+
+    if ($wakePhrase -and $lower -notmatch [Regex]::Escape($wakePhrase)) {
+        return [pscustomobject]@{
+            Action = "none"
+            Response = "Panggil aku dengan '$wakePhrase' dulu ya, biar aku tahu kamu lagi ngomong ke Notifu."
+            DraftReply = ""
+        }
+    }
+
+    if ($wakePhrase) {
+        $lower = ($lower -replace [Regex]::Escape($wakePhrase), "").Trim()
+        $text = ($text -replace [Regex]::Escape($wakePhrase), "").Trim()
+    }
+
+    if (-not $lower) {
+        return [pscustomobject]@{
+            Action = "wake"
+            Response = "Iya, Notifu di sini. Mau aku ulangi, hide, off, on, status, atau buka aplikasi sumber?"
+            DraftReply = ""
+        }
+    }
+
+    if ($lower -match "\b(status|cek status)\b") {
+        return [pscustomobject]@{
+            Action = "status"
+            Response = "Statusku aktif. Voice pakai RVC queue satu-satu, dan pet kecilku cuma jalan-jalan sambil bisa kamu drag."
+            DraftReply = ""
+        }
+    }
+
+    if ($lower -match "\b(hide|sembunyi|umpet)\b") {
+        return [pscustomobject]@{
+            Action = "hide_pet"
+            Response = "Oke, pet kecilku aku sembunyikan dulu."
+            DraftReply = ""
+        }
+    }
+
+    if ($lower -match "\b(show|muncul|tampil)\b") {
+        return [pscustomobject]@{
+            Action = "show_pet"
+            Response = "Aku munculkan pet kecilnya lagi."
+            DraftReply = ""
+        }
+    }
+
+    if ($lower -match "\b(off|mati|nonaktif)\b") {
+        return [pscustomobject]@{
+            Action = "voice_off"
+            Response = "Oke, suara Notifu aku matikan dulu. Notifikasi tetap jalan tanpa suara."
+            DraftReply = ""
+        }
+    }
+
+    if ($lower -match "\b(on|nyala|aktifkan suara|voice on)\b") {
+        return [pscustomobject]@{
+            Action = "voice_on"
+            Response = "Suara Notifu aktif lagi. Aku jawab satu-satu biar enggak tumpang tindih."
             DraftReply = ""
         }
     }
@@ -1011,7 +1042,7 @@ function Get-NotifuVoiceCommandAction {
 
     return [pscustomobject]@{
         Action = "chat"
-        Response = "Aku dengar: $text. Tapi tanpa AI key, aku baru paham perintah dasar seperti buka, ulangi, salin, abaikan, pause, dan resume."
+        Response = "Aku dengar: $text. Tapi tanpa AI key, aku baru paham perintah dasar seperti hide, show, off, on, status, buka, ulangi, salin, abaikan, pause, dan resume."
         DraftReply = ""
     }
 }
@@ -1064,6 +1095,73 @@ function Invoke-NotifuOpenAITts {
     }
 }
 
+function Get-NotifuSpeechQueuePath {
+    $queueDir = Join-Path (Split-Path -Parent $PSScriptRoot) "logs\speech-queue"
+    if (-not (Test-Path -LiteralPath $queueDir)) {
+        New-Item -ItemType Directory -Force -Path $queueDir | Out-Null
+    }
+
+    return $queueDir
+}
+
+function Test-NotifuSpeechQueueWorkerRunning {
+    try {
+        $root = [Regex]::Escape((Split-Path -Parent $PSScriptRoot))
+        $pattern = "$root.*scripts\\process-speech-queue\.ps1"
+        $currentPid = $PID
+        $workers = @(Get-CimInstance Win32_Process |
+            Where-Object { $_.ProcessId -ne $currentPid -and $_.CommandLine -match $pattern })
+        return ($workers.Count -gt 0)
+    } catch {
+        Write-NotifuLog -Level "warn" -Message "Unable to inspect speech queue worker: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+function Start-NotifuSpeechQueueWorker {
+    param(
+        [string]$SettingsPath = (Join-Path (Split-Path -Parent $PSScriptRoot) "config\notifu.settings.json")
+    )
+
+    if (Test-NotifuSpeechQueueWorkerRunning) {
+        return
+    }
+
+    $root = Split-Path -Parent $PSScriptRoot
+    $workerScript = Join-Path $root "scripts\process-speech-queue.ps1"
+    if (-not (Test-Path -LiteralPath $workerScript)) {
+        Write-NotifuLog -Level "warn" -Message "Speech queue worker not found: $workerScript"
+        return
+    }
+
+    $powershellPath = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+    $workerArgs = @(
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", $workerScript,
+        "-SettingsPath", $SettingsPath
+    )
+    $workerArgumentString = ($workerArgs | ForEach-Object { ConvertTo-NotifuProcessArgument -Value ([string]$_) }) -join " "
+    Start-Process -FilePath $powershellPath -ArgumentList $workerArgumentString -WindowStyle Hidden | Out-Null
+    Write-NotifuLog -Message "Speech queue worker started."
+}
+
+function Add-NotifuSpeechQueueItem {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+
+        [string]$SettingsPath = (Join-Path (Split-Path -Parent $PSScriptRoot) "config\notifu.settings.json")
+    )
+
+    $queueDir = Get-NotifuSpeechQueuePath
+    $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmssfff")
+    $queuePath = Join-Path $queueDir ("{0}-{1}.txt" -f $stamp, [Guid]::NewGuid().ToString("N"))
+    Set-Content -LiteralPath $queuePath -Value $Text -Encoding UTF8
+    Start-NotifuSpeechQueueWorker -SettingsPath $SettingsPath
+    Write-NotifuLog -Message "Speech queued: $queuePath"
+}
+
 function Invoke-NotifuSpeech {
     param(
         [Parameter(Mandatory = $true)]
@@ -1080,12 +1178,25 @@ function Invoke-NotifuSpeech {
         return
     }
 
+    if ($Async) {
+        Add-NotifuSpeechQueueItem -Text $Text
+        return
+    }
+
     if ($Settings.voice.provider -eq "openai" -and (Invoke-NotifuOpenAITts -Text $Text -Settings $Settings)) {
         return
     }
 
-    if ($Settings.voice.provider -eq "rvc" -and (Invoke-NotifuRvcSpeech -Text $Text -Settings $Settings -Async:$Async)) {
-        return
+    if ($Settings.voice.provider -eq "rvc") {
+        if (Invoke-NotifuRvcSpeech -Text $Text -Settings $Settings) {
+            return
+        }
+
+        $rvcOnly = [bool](Get-NotifuObjectValue -Object $Settings.voice -Name "rvcOnly" -Default $false)
+        if ($rvcOnly) {
+            Write-NotifuLog -Level "warn" -Message "RVC-only voice is enabled; local fallback suppressed."
+            return
+        }
     }
 
     if ($Settings.voice.chimeBeforeSpeech) {

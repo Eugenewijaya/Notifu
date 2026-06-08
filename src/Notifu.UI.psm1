@@ -439,7 +439,15 @@ function Set-NotifuDesktopPetBubble {
         return
     }
 
+    if ($Settings.ui.PSObject.Properties["petBubbleEnabled"] -and -not [bool]$Settings.ui.petBubbleEnabled) {
+        return
+    }
+
     $ctx = $script:PetContext
+    if (-not $ctx.Bubble -or -not $ctx.MessageLabel) {
+        return
+    }
+
     $path = Get-NotifuExpressionAssetPath -Settings $Settings -Expression $Expression
     if (Test-Path -LiteralPath $path) {
         if ($ctx.Avatar.Tag) {
@@ -456,6 +464,14 @@ function Set-NotifuDesktopPetBubble {
     $ctx.BubbleTicks = 0
 }
 
+function Set-NotifuDesktopPetVisible {
+    param([bool]$Visible)
+
+    if ($script:PetContext -and $script:PetContext.Form -and -not $script:PetContext.Form.IsDisposed) {
+        $script:PetContext.Form.Visible = $Visible
+    }
+}
+
 function Show-NotifuDesktopPet {
     param(
         [Parameter(Mandatory = $true)]
@@ -469,9 +485,9 @@ function Show-NotifuDesktopPet {
     }
 
     $screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
-    $petSize = [int](Get-NotifuProperty -Object $Settings.ui -Name "petSize" -Default 112)
-    $width = [Math]::Max(280, $petSize + 170)
-    $height = $petSize + 74
+    $petSize = [int](Get-NotifuProperty -Object $Settings.ui -Name "petSize" -Default 64)
+    $width = $petSize + 18
+    $height = $petSize + 18
     $transparent = [System.Drawing.Color]::Magenta
 
     $form = New-Object System.Windows.Forms.Form
@@ -485,28 +501,18 @@ function Show-NotifuDesktopPet {
     $form.TransparencyKey = $transparent
     $form.Location = New-Object System.Drawing.Point ($screen.Right - $width - 30), ($screen.Bottom - $height - 6)
 
-    $bubble = New-Object System.Windows.Forms.Panel
-    $bubble.Location = New-Object System.Drawing.Point 0, 2
-    $bubble.Size = New-Object System.Drawing.Size ($width - 24), 60
-    $bubble.BackColor = [System.Drawing.Color]::FromArgb(255, 250, 231)
-    $bubble.Region = New-NotifuRoundedRegion -Width $bubble.Width -Height $bubble.Height -Radius 14
-    $bubble.Visible = $false
-    $form.Controls.Add($bubble)
-
-    $message = New-Object System.Windows.Forms.Label
-    $message.AutoSize = $false
-    $message.Location = New-Object System.Drawing.Point 12, 8
-    $message.Size = New-Object System.Drawing.Size ($bubble.Width - 24), ($bubble.Height - 14)
-    $message.Font = New-Object System.Drawing.Font "Segoe UI", 8.5
-    $message.ForeColor = [System.Drawing.Color]::FromArgb(45, 42, 38)
-    $bubble.Controls.Add($message)
-
     $avatar = New-Object System.Windows.Forms.PictureBox
     $avatar.Size = New-Object System.Drawing.Size $petSize, $petSize
-    $avatar.Location = New-Object System.Drawing.Point ($width - $petSize - 16), 58
+    $avatar.Location = New-Object System.Drawing.Point 9, 9
     $avatar.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::Normal
     $avatar.BackColor = $transparent
-    $avatarPath = Get-NotifuExpressionAssetPath -Settings $Settings -Expression "happy"
+    $avatarPath = [string](Get-NotifuProperty -Object $Settings.ui -Name "petImagePath" -Default "")
+    if (-not $avatarPath) {
+        $avatarPath = Get-NotifuExpressionAssetPath -Settings $Settings -Expression "happy"
+    } else {
+        $avatarPath = Resolve-NotifuPath -Path $avatarPath
+    }
+
     if (Test-Path -LiteralPath $avatarPath) {
         $avatar.Tag = Get-NotifuImage -Path $avatarPath
     }
@@ -525,44 +531,71 @@ function Show-NotifuDesktopPet {
             $graphics.DrawImage($image, (New-Object System.Drawing.Rectangle $drawX, $drawY, $drawWidth, $drawHeight))
         }
     })
-    $avatar.Add_Click({
+
+    $dragStart = {
+        param($sender, $eventArgs)
         $ctx = $script:PetContext
-        if ($ctx -and $ctx.OnClick) {
-            & $ctx.OnClick
+        if ($ctx -and $eventArgs.Button -eq [System.Windows.Forms.MouseButtons]::Left) {
+            $ctx.Dragging = $true
+            $ctx.DragOffset = New-Object System.Drawing.Point $eventArgs.X, $eventArgs.Y
+            $ctx.ManualUntil = (Get-Date).AddSeconds(10)
         }
-    })
+    }
+
+    $dragMove = {
+        param($sender, $eventArgs)
+        $ctx = $script:PetContext
+        if ($ctx -and $ctx.Dragging) {
+            $screenPoint = [System.Windows.Forms.Control]::MousePosition
+            $ctx.Form.Location = New-Object System.Drawing.Point ($screenPoint.X - $ctx.DragOffset.X), ($screenPoint.Y - $ctx.DragOffset.Y)
+        }
+    }
+
+    $dragEnd = {
+        param($sender, $eventArgs)
+        $ctx = $script:PetContext
+        if ($ctx) {
+            $ctx.Dragging = $false
+        }
+    }
+
+    $avatar.Add_MouseDown($dragStart)
+    $avatar.Add_MouseMove($dragMove)
+    $avatar.Add_MouseUp($dragEnd)
+    $form.Add_MouseDown($dragStart)
+    $form.Add_MouseMove($dragMove)
+    $form.Add_MouseUp($dragEnd)
     $form.Controls.Add($avatar)
 
     $timer = New-Object System.Windows.Forms.Timer
-    $timer.Interval = 36
+    $timer.Interval = 45
     $timer.Add_Tick({
         $ctx = $script:PetContext
         if (-not $ctx -or -not $ctx.Form -or $ctx.Form.IsDisposed) {
             return
         }
 
+        if ($ctx.Dragging) {
+            return
+        }
+
         $ctx.Tick = $ctx.Tick + 1
         $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+        if ($ctx.ManualUntil -and (Get-Date) -lt $ctx.ManualUntil) {
+            $safeX = [Math]::Max($bounds.Left + 4, [Math]::Min($ctx.Form.Left, $bounds.Right - $ctx.Form.Width - 4))
+            $safeY = [Math]::Max($bounds.Top + 4, [Math]::Min($ctx.Form.Top, $bounds.Bottom - $ctx.Form.Height - 4))
+            $ctx.Form.Location = New-Object System.Drawing.Point $safeX, $safeY
+            return
+        }
+
         $nextX = $ctx.Form.Left + $ctx.Direction
         if ($nextX -lt ($bounds.Left + 10) -or $nextX -gt ($bounds.Right - $ctx.Form.Width - 10)) {
             $ctx.Direction = -1 * $ctx.Direction
             $nextX = $ctx.Form.Left + $ctx.Direction
         }
 
-        $bob = [int](4 * [Math]::Sin($ctx.Tick / 8.0))
+        $bob = [int](2 * [Math]::Sin($ctx.Tick / 8.0))
         $ctx.Form.Location = New-Object System.Drawing.Point $nextX, ($bounds.Bottom - $ctx.Form.Height - 6 + $bob)
-
-        if ($ctx.Bubble.Visible) {
-            $ctx.BubbleTicks = $ctx.BubbleTicks + 1
-            if ($ctx.TypeIndex -lt $ctx.FullText.Length) {
-                $ctx.TypeIndex = [Math]::Min($ctx.FullText.Length, $ctx.TypeIndex + 2)
-                $ctx.MessageLabel.Text = $ctx.FullText.Substring(0, $ctx.TypeIndex)
-            }
-
-            if ($ctx.BubbleTicks -gt 280) {
-                $ctx.Bubble.Visible = $false
-            }
-        }
     })
 
     $form.Add_FormClosed({
@@ -580,14 +613,17 @@ function Show-NotifuDesktopPet {
     $script:PetContext = [pscustomobject]@{
         Form = $form
         Avatar = $avatar
-        Bubble = $bubble
-        MessageLabel = $message
+        Bubble = $null
+        MessageLabel = $null
         Timer = $timer
-        Direction = -2
+        Direction = -1
         Tick = 0
         FullText = ""
         TypeIndex = 0
         BubbleTicks = 0
+        Dragging = $false
+        DragOffset = (New-Object System.Drawing.Point 0, 0)
+        ManualUntil = $null
         OnClick = $OnClick
     }
 
@@ -893,5 +929,6 @@ Export-ModuleMember -Function `
     Close-NotifuAssistantPopup, `
     Show-NotifuDesktopPet, `
     Set-NotifuDesktopPetBubble, `
+    Set-NotifuDesktopPetVisible, `
     Show-NotifuSettingsWindow, `
     Resolve-NotifuPath

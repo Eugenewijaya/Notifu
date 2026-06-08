@@ -33,12 +33,14 @@
     "showTrayIcon": true,
     "useCustomPopup": true,
     "enableDesktopPet": true,
+    "petBubbleEnabled": false,
     "popupDurationSeconds": 16,
     "avatarImagePath": "assets\\notifu-expression-happy.png",
+    "petImagePath": "assets\\notifu-fullbody-chibi.png",
     "appIconPath": "assets\\notifu-app-icon.ico",
     "popupWidth": 500,
     "popupHeight": 205,
-    "petSize": 112,
+    "petSize": 64,
     "expressionImages": {
       "happy": "assets\\notifu-expression-happy.png",
       "talking": "assets\\notifu-expression-talking.png",
@@ -56,11 +58,12 @@
   "voice": {
     "enabled": true,
     "provider": "rvc",
+    "rvcOnly": true,
     "preferFemale": true,
     "localVoiceName": "",
     "localRate": 2,
     "volume": 100,
-    "chimeBeforeSpeech": true,
+    "chimeBeforeSpeech": false,
     "openAiTtsModel": "gpt-4o-mini-tts",
     "openAiVoice": "coral",
     "openAiInstructions": "Bicara dalam Bahasa Indonesia dengan suara perempuan muda yang ceria, lembut, playful, sedikit centil, agak ceroboh, dan anime-inspired original. Jangan meniru karakter, aktor suara, orang nyata, atau IP tertentu. Intonasi ramah, natural, adaptif, tidak robotik, tidak berlebihan, dan jelas."
@@ -69,7 +72,8 @@
     "enabled": true,
     "culture": "id-ID",
     "listenTimeoutSeconds": 6,
-    "wakeMode": "button"
+    "wakeMode": "button",
+    "wakePhrase": "halo notifu"
   },
   "rvc": {
     "modelPath": "C:\\Users\\User\\Documents\\kobo voice model\\kobo\\kobov2.pth",
