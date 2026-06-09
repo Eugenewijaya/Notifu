@@ -49,7 +49,7 @@ internal static class InstallerService
         using (var uninstall = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\Notifu"))
         {
             uninstall.SetValue("DisplayName", "Notifu - Your Waifu Notification");
-            uninstall.SetValue("DisplayVersion", "0.2.1");
+            uninstall.SetValue("DisplayVersion", "0.2.2");
             uninstall.SetValue("Publisher", "Evid Wijaya");
             uninstall.SetValue("DisplayIcon", Path.Combine(InstallPath, "Notifu.exe"));
             uninstall.SetValue("InstallLocation", InstallPath);

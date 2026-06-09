@@ -6,7 +6,7 @@ Audit date: 2026-06-09
 
 | Area | Before | Native fix |
 |---|---|---|
-| Idle runtime | Windows PowerShell process measured around 120 MB | Native WinForms tray process, no PowerShell main loop |
+| Idle runtime | Windows PowerShell process measured around 120 MB | Native self-contained tray process measured around 76 MB working set / 28 MB private |
 | Popup latency | Popup waited for synchronous AI analysis | Raw notification popup is shown immediately; voice runs afterward |
 | Polling | Every 3 seconds | Every 1 second by default |
 | Notification order | Notification Center enumeration order | WhatsApp and browsers receive higher priority |
@@ -28,3 +28,6 @@ Audit date: 2026-06-09
 RVC uses Python, PyTorch, and the user-supplied model. It can still use substantial
 RAM while generating voice. This cost is isolated from the idle Notifu process and
 is not started until a notification actually needs speech.
+
+The final self-contained package disables ReadyToRun. In local measurement this
+reduced idle memory further while keeping observed startup around 1.8 seconds.

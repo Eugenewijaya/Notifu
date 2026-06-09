@@ -8,11 +8,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>..\..\assets\notifu-app-icon.ico</ApplicationIcon>
     <AssemblyName>Notifu.Setup</AssemblyName>
-    <Version>0.2.1</Version>
+    <Version>0.2.2</Version>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishReadyToRun>false</PublishReadyToRun>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
 
