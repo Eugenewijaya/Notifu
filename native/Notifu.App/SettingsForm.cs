@@ -5,8 +5,7 @@ namespace Notifu.App;
 internal sealed class SettingsForm : Form
 {
     private readonly AppPaths _paths;
-    private readonly CheckBox _voice = new() { Text = "Aktifkan suara Kobo / RVC", AutoSize = true };
-    private readonly CheckBox _ai = new() { Text = "Aktifkan analisis AI setelah popup tampil", AutoSize = true };
+    private readonly CheckBox _voice = new() { Text = "Aktifkan suara notifikasi", AutoSize = true };
     private readonly CheckBox _privacy = new() { Text = "Bacakan isi pesan", AutoSize = true };
     private readonly CheckBox _startup = new() { Text = "Jalankan Notifu saat login Windows", AutoSize = true };
     private readonly NumericUpDown _poll = new() { Minimum = 500, Maximum = 10000, Increment = 250, Width = 110 };
@@ -42,7 +41,7 @@ internal sealed class SettingsForm : Form
             Dock = DockStyle.Fill,
             Padding = new Padding(28),
             ColumnCount = 2,
-            RowCount = 11
+            RowCount = 10
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
@@ -52,18 +51,16 @@ internal sealed class SettingsForm : Form
         layout.SetColumnSpan(subtitle, 2);
         layout.Controls.Add(_voice, 0, 2);
         layout.SetColumnSpan(_voice, 2);
-        layout.Controls.Add(_ai, 0, 3);
-        layout.SetColumnSpan(_ai, 2);
-        layout.Controls.Add(_privacy, 0, 4);
+        layout.Controls.Add(_privacy, 0, 3);
         layout.SetColumnSpan(_privacy, 2);
-        layout.Controls.Add(_startup, 0, 5);
+        layout.Controls.Add(_startup, 0, 4);
         layout.SetColumnSpan(_startup, 2);
-        layout.Controls.Add(new Label { Text = "Polling notifikasi (ms)", AutoSize = true }, 0, 6);
-        layout.Controls.Add(_poll, 1, 6);
-        layout.Controls.Add(new Label { Text = "Durasi popup (detik)", AutoSize = true }, 0, 7);
-        layout.Controls.Add(_duration, 1, 7);
-        layout.Controls.Add(new Label { Text = "Aplikasi prioritas, satu per baris", AutoSize = true }, 0, 8);
-        layout.Controls.Add(_priority, 1, 8);
+        layout.Controls.Add(new Label { Text = "Polling notifikasi (ms)", AutoSize = true }, 0, 5);
+        layout.Controls.Add(_poll, 1, 5);
+        layout.Controls.Add(new Label { Text = "Durasi popup (detik)", AutoSize = true }, 0, 6);
+        layout.Controls.Add(_duration, 1, 6);
+        layout.Controls.Add(new Label { Text = "Aplikasi prioritas, satu per baris", AutoSize = true }, 0, 7);
+        layout.Controls.Add(_priority, 1, 7);
 
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft, AutoSize = true };
         var save = Button("Simpan", Color.FromArgb(35, 150, 135));
@@ -77,7 +74,7 @@ internal sealed class SettingsForm : Form
             Close();
         };
         buttons.Controls.AddRange([save, test, exit]);
-        layout.Controls.Add(buttons, 0, 10);
+        layout.Controls.Add(buttons, 0, 9);
         layout.SetColumnSpan(buttons, 2);
         Controls.Add(layout);
         LoadValues();
@@ -97,7 +94,6 @@ internal sealed class SettingsForm : Form
     {
         var settings = AppSettings.Load(_paths);
         _voice.Checked = settings.VoiceEnabled;
-        _ai.Checked = settings.AiEnabled;
         _privacy.Checked = settings.ReadMessageBody;
         _startup.Checked = settings.StartWithWindows;
         _poll.Value = settings.PollMilliseconds;
@@ -114,7 +110,7 @@ internal sealed class SettingsForm : Form
             PopupDurationSeconds = (int)_duration.Value,
             IgnoreExistingOnStartup = settings.IgnoreExistingOnStartup,
             VoiceEnabled = _voice.Checked,
-            AiEnabled = _ai.Checked,
+            AiEnabled = settings.AiEnabled,
             ReadMessageBody = _privacy.Checked,
             ShowTrayIcon = settings.ShowTrayIcon,
             StartWithWindows = _startup.Checked,

@@ -10,7 +10,7 @@
     <ApplicationIcon>..\..\assets\notifu-app-icon.ico</ApplicationIcon>
     <AssemblyName>Notifu</AssemblyName>
     <RootNamespace>Notifu.App</RootNamespace>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>

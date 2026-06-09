@@ -15,7 +15,7 @@ through a single voice queue.
 - Reads all Windows notifications by default, with allow/block lists.
 - No permanent desktop pet or animation worker while idle.
 - One queued voice worker prevents overlapping speech.
-- Optional user-supplied RVC voice model and optional OpenAI analysis.
+- Working local voice by default, with optional user-supplied RVC voice conversion.
 - Per-user installer, Start Menu shortcut, startup registration, and uninstaller.
 - `Matikan Notifu` is available from tray and Settings.
 
@@ -127,13 +127,16 @@ hidden. Set notification mode to `allowlist` to process only selected apps.
 ## Voice
 
 Notifu shows the popup before starting voice work. Voice runs through one queue,
-so two notifications cannot talk over each other.
+so two notifications cannot talk over each other. Fresh installs use the available
+Windows local voice so notifications are never silently dropped.
 
 The repository supports a user-supplied RVC model through
 `config/notifu.settings.json`. Put personal model files under the ignored `models/`
 folder or use an absolute local path. Installer updates preserve the user's existing
-settings. RVC/Python can use substantial RAM while generating audio, but it is not
-kept alive while Notifu is idle. Model files are never committed or distributed.
+settings. Set `voice.provider` to `rvc` and `voice.rvcOnly` to `true` only after the
+Python environment, model, and index paths are configured. RVC/Python can use
+substantial RAM while generating audio, but it is not kept alive while Notifu is
+idle. Model files are never committed or distributed.
 
 ## Test And Development
 

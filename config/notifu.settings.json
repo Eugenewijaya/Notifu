@@ -71,8 +71,8 @@
   },
   "voice": {
     "enabled": true,
-    "provider": "rvc",
-    "rvcOnly": true,
+    "provider": "local",
+    "rvcOnly": false,
     "preferFemale": true,
     "localVoiceName": "",
     "localRate": 2,
