@@ -13,6 +13,15 @@ static class Program
             return;
         }
 
+        if (args.Contains("--test-speech", StringComparer.OrdinalIgnoreCase))
+        {
+            var testPaths = AppPaths.Discover();
+            var testSettings = AppSettings.Load(testPaths);
+            new SpeechQueue(testPaths, testSettings).Enqueue(
+                NotificationItem.SpeechTest().Announcement(testSettings.ReadMessageBody, testSettings.UserName));
+            return;
+        }
+
         using var mutex = new Mutex(true, @"Local\Notifu-Native-Notification-Assistant", out var createdNew);
         if (!createdNew && !args.Contains("--settings", StringComparer.OrdinalIgnoreCase))
         {

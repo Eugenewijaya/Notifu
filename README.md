@@ -11,6 +11,9 @@ through a single voice queue.
 
 - Native Windows `.exe` with a tray menu and standalone Settings window.
 - Instant cloud/chat popup with animated typewriter text and expressive anime head.
+- No OpenAI wait: notification wording uses 12 local delivery templates.
+- Popup stays at the top-right and replaces the previous popup instead of stacking.
+- Direct-read mode uses the local Windows voice so speech starts without AI or RVC conversion delay.
 - Prioritizes WhatsApp and browser notifications before lower-priority apps.
 - Reads all Windows notifications by default, with allow/block lists.
 - No permanent desktop pet or animation worker while idle.
@@ -29,7 +32,7 @@ Notifu is designed to be inspectable and local-first.
 - Notifu does not read WhatsApp databases, browser databases, or encrypted storage.
 - Notification history is not stored by default.
 - Voice model files stay on the user's computer and are not included in releases.
-- OpenAI requests happen only after the user supplies their own API key and enables AI.
+- OpenAI analysis and OpenAI voice are disabled in the current direct-read build.
 
 Review the source before installing. The notification, popup, settings, installer,
 and uninstaller implementations live under [`native/`](native/).
@@ -130,10 +133,12 @@ Notifu shows the popup before starting voice work. Voice runs through one queue,
 so two notifications cannot talk over each other. Fresh installs use the available
 Windows local voice so notifications are never silently dropped.
 
-The repository supports a user-supplied RVC model through
+The direct-read release uses the local Windows voice by default. The repository
+still supports a user-supplied RVC model through
 `config/notifu.settings.json`. Put personal model files under the ignored `models/`
 folder or use an absolute local path. Installer updates preserve the user's existing
-settings. Set `voice.provider` to `rvc` and `voice.rvcOnly` to `true` only after the
+settings except that direct-read updates disable AI and switch voice back to local.
+Set `voice.provider` to `rvc` and `voice.rvcOnly` to `true` only after the
 Python environment, model, and index paths are configured. RVC/Python can use
 substantial RAM while generating audio, but it is not kept alive while Notifu is
 idle. Model files are never committed or distributed.
@@ -146,6 +151,9 @@ idle. Model files are never committed or distributed.
 
 # Preview the native cloud popup
 .\dist\app\Notifu.exe --test-popup
+
+# Read a test notification immediately using the active local/RVC provider
+.\dist\app\Notifu.exe --test-speech
 
 # Open native Settings
 .\dist\app\Notifu.exe --settings

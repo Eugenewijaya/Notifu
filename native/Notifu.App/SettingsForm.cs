@@ -110,7 +110,7 @@ internal sealed class SettingsForm : Form
             PopupDurationSeconds = (int)_duration.Value,
             IgnoreExistingOnStartup = settings.IgnoreExistingOnStartup,
             VoiceEnabled = _voice.Checked,
-            AiEnabled = settings.AiEnabled,
+            AiEnabled = false,
             ReadMessageBody = _privacy.Checked,
             ShowTrayIcon = settings.ShowTrayIcon,
             StartWithWindows = _startup.Checked,

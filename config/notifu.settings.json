@@ -65,7 +65,7 @@
     "nativePreferred": true
   },
   "ai": {
-    "enabled": true,
+    "enabled": false,
     "model": "gpt-4o-mini",
     "timeoutSeconds": 30
   },

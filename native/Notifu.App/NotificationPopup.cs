@@ -26,15 +26,15 @@ internal sealed class NotificationPopup : Form
         ShowInTaskbar = false;
         TopMost = true;
         BackColor = Color.FromArgb(248, 252, 255);
-        ClientSize = new Size(470, 178);
+        ClientSize = new Size(500, 205);
         DoubleBuffered = true;
         Padding = new Padding(18);
 
         var app = new Label
         {
             AutoSize = false,
-            Location = new Point(146, 23),
-            Size = new Size(288, 24),
+            Location = new Point(142, 22),
+            Size = new Size(322, 24),
             Font = new Font("Segoe UI Semibold", 10.5f),
             ForeColor = Color.FromArgb(30, 96, 110),
             Text = item.AppName
@@ -42,8 +42,8 @@ internal sealed class NotificationPopup : Form
         var sender = new Label
         {
             AutoEllipsis = true,
-            Location = new Point(146, 48),
-            Size = new Size(288, 26),
+            Location = new Point(142, 48),
+            Size = new Size(322, 28),
             Font = new Font("Segoe UI Semibold", 12.5f),
             ForeColor = Color.FromArgb(31, 39, 51),
             Text = string.IsNullOrWhiteSpace(item.Title) ? "Notifikasi baru" : item.Title
@@ -51,15 +51,16 @@ internal sealed class NotificationPopup : Form
         _message = new Label
         {
             AutoEllipsis = true,
-            Location = new Point(146, 79),
-            Size = new Size(288, 66),
+            Location = new Point(142, 82),
+            Size = new Size(322, 92),
             Font = new Font("Segoe UI", 10.5f),
-            ForeColor = Color.FromArgb(54, 64, 78)
+            ForeColor = Color.FromArgb(54, 64, 78),
+            TextAlign = ContentAlignment.TopLeft
         };
         _avatar = new PictureBox
         {
             Location = new Point(18, 22),
-            Size = new Size(112, 112),
+            Size = new Size(108, 108),
             SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.Transparent
         };
@@ -68,7 +69,7 @@ internal sealed class NotificationPopup : Form
         SetAvatar(item.Expression);
 
         Controls.AddRange([app, sender, _message, _avatar]);
-        _fullMessage = string.IsNullOrWhiteSpace(item.Body) ? "Ada notifikasi baru yang perlu kamu lihat." : item.Body;
+        _fullMessage = PrepareDisplayMessage(item.Body);
         _closeTimer.Interval = Math.Clamp(durationSeconds, 4, 30) * 1000;
         _closeTimer.Tick += (_, _) => CloseAnimated();
         _typing.Tick += (_, _) => TypeNext();
@@ -84,7 +85,7 @@ internal sealed class NotificationPopup : Form
     {
         var work = Screen.PrimaryScreen?.WorkingArea ?? Screen.GetWorkingArea(this);
         _targetX = work.Right - Width - 18;
-        Location = new Point(work.Right + 10, work.Bottom - Height - 18);
+        Location = new Point(work.Right + 10, work.Top + 18);
         Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 34, 34));
         _animation.Start();
         _typing.Start();
@@ -139,6 +140,14 @@ internal sealed class NotificationPopup : Form
         _avatar.Image = null;
         foreach (var image in _frames.Values) image.Dispose();
         _frames.Clear();
+    }
+
+    private static string PrepareDisplayMessage(string message)
+    {
+        var normalized = string.IsNullOrWhiteSpace(message)
+            ? "Ada notifikasi baru yang perlu kamu lihat."
+            : string.Join(" ", message.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
+        return normalized.Length <= 320 ? normalized : $"{normalized[..317]}...";
     }
 
     private void PaintCloud(object? sender, PaintEventArgs e)

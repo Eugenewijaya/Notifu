@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Win32;
 
 namespace Notifu.Setup;
@@ -30,7 +32,7 @@ internal static class InstallerService
         if (preservedSettings is not null)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!);
-            File.WriteAllText(settingsPath, preservedSettings);
+            File.WriteAllText(settingsPath, DisableOpenAi(preservedSettings));
         }
 
         progress("Mendaftarkan shortcut dan uninstaller...");
@@ -49,7 +51,7 @@ internal static class InstallerService
         using (var uninstall = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\Notifu"))
         {
             uninstall.SetValue("DisplayName", "Notifu - Your Waifu Notification");
-            uninstall.SetValue("DisplayVersion", "0.2.2");
+            uninstall.SetValue("DisplayVersion", "0.2.3");
             uninstall.SetValue("Publisher", "Evid Wijaya");
             uninstall.SetValue("DisplayIcon", Path.Combine(InstallPath, "Notifu.exe"));
             uninstall.SetValue("InstallLocation", InstallPath);
@@ -99,6 +101,24 @@ internal static class InstallerService
 
     private static void StopRunning()
     {
+        var stopScript = Path.Combine(InstallPath, "scripts", "stop.ps1");
+        if (File.Exists(stopScript))
+        {
+            try
+            {
+                var powerShell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                    "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+                using var stop = Process.Start(new ProcessStartInfo(powerShell,
+                    $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{stopScript}\" -Silent")
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+                stop?.WaitForExit(10000);
+            }
+            catch { }
+        }
+
         var native = Path.Combine(InstallPath, "Notifu.exe");
         if (File.Exists(native))
         {
@@ -123,6 +143,20 @@ internal static class InstallerService
             }
             catch { }
         }
+    }
+
+    private static string DisableOpenAi(string settingsJson)
+    {
+        var root = JsonNode.Parse(settingsJson)?.AsObject() ?? new JsonObject();
+        var ai = root["ai"] as JsonObject ?? new JsonObject();
+        ai["enabled"] = false;
+        root["ai"] = ai;
+
+        var voice = root["voice"] as JsonObject ?? new JsonObject();
+        voice["provider"] = "local";
+        voice["rvcOnly"] = false;
+        root["voice"] = voice;
+        return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
     }
 
     private static void CreateShortcut(string path, string target, string arguments, string workingDirectory)

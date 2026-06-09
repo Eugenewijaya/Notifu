@@ -724,13 +724,6 @@ function Get-NotifuAnalysis {
         $Settings
     )
 
-    if ($Settings.ai.enabled) {
-        $cloud = Invoke-NotifuOpenAIAnalysis -Notification $Notification -Settings $Settings
-        if ($cloud) {
-            return $cloud
-        }
-    }
-
     return Get-NotifuLocalAnalysis -Notification $Notification -Settings $Settings
 }
 
@@ -1034,22 +1027,9 @@ function Get-NotifuVoiceCommandAction {
         }
     }
 
-    $cloudReply = $null
-    if ($Settings.ai.enabled) {
-        $cloudReply = Invoke-NotifuOpenAIConversation -CommandText $text -Notification $Notification -Analysis $Analysis -Settings $Settings
-    }
-
-    if ($cloudReply) {
-        return [pscustomobject]@{
-            Action = "chat"
-            Response = $cloudReply
-            DraftReply = ""
-        }
-    }
-
     return [pscustomobject]@{
         Action = "chat"
-        Response = "Aku dengar: $text. Tapi tanpa AI key, aku baru paham perintah dasar seperti hide, show, off, on, status, buka, ulangi, salin, abaikan, pause, dan resume."
+        Response = "Aku dengar: $text. Mode langsung aktif, jadi aku hanya menjalankan perintah dasar seperti hide, show, off, on, status, buka, ulangi, salin, abaikan, pause, dan resume."
         DraftReply = ""
     }
 }
@@ -1099,6 +1079,61 @@ function Invoke-NotifuOpenAITts {
     } catch {
         Write-NotifuLog -Level "warn" -Message "OpenAI TTS failed: $($_.Exception.Message)"
         return $false
+    }
+}
+
+function Invoke-NotifuEdgeSpeech {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+
+        [Parameter(Mandatory = $true)]
+        $Settings
+    )
+
+    $rvcSettings = Get-NotifuObjectValue -Object $Settings -Name "rvc" -Default $null
+    if (-not $rvcSettings) {
+        return $false
+    }
+
+    $pythonPath = Resolve-NotifuWorkspacePath -Path ([string](Get-NotifuObjectValue -Object $rvcSettings -Name "pythonPath" -Default ".venv-rvc\Scripts\python.exe"))
+    $scriptsDir = Split-Path -Parent $pythonPath
+    $edgePlayback = Join-Path $scriptsDir "edge-playback.exe"
+    $edgeTts = Join-Path $scriptsDir "edge-tts.exe"
+    if (-not (Test-Path -LiteralPath $edgePlayback) -or -not (Test-Path -LiteralPath $edgeTts)) {
+        return $false
+    }
+
+    $audioDir = Join-Path (Split-Path -Parent $PSScriptRoot) "logs\audio"
+    if (-not (Test-Path -LiteralPath $audioDir)) {
+        New-Item -ItemType Directory -Force -Path $audioDir | Out-Null
+    }
+
+    $textPath = Join-Path $audioDir ("notifu-direct-{0}.txt" -f ([Guid]::NewGuid().ToString("N")))
+    $oldPath = $env:PATH
+    try {
+        Set-Content -LiteralPath $textPath -Value $Text -Encoding UTF8
+        $env:PATH = "$scriptsDir;$oldPath"
+        $voiceName = [string](Get-NotifuObjectValue -Object $rvcSettings -Name "baseVoice" -Default "id-ID-GadisNeural")
+        $argumentList = @("--voice", $voiceName, "--file", $textPath)
+        $argumentString = ($argumentList | ForEach-Object { ConvertTo-NotifuProcessArgument -Value ([string]$_) }) -join " "
+        $process = Start-Process -FilePath $edgePlayback -ArgumentList $argumentString -PassThru -WindowStyle Hidden
+        if (-not $process.WaitForExit(45000)) {
+            try { $process.Kill() } catch {}
+            throw "Direct voice timed out after 45 seconds."
+        }
+        $process.Refresh()
+        if ($process.ExitCode -ne 0) {
+            throw "Direct voice exited with code $($process.ExitCode)."
+        }
+        Write-NotifuLog -Message "Direct Edge voice succeeded without OpenAI or RVC."
+        return $true
+    } catch {
+        Write-NotifuLog -Level "warn" -Message "Direct Edge voice failed: $($_.Exception.Message)"
+        return $false
+    } finally {
+        $env:PATH = $oldPath
+        Remove-Item -LiteralPath $textPath -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -1190,10 +1225,6 @@ function Invoke-NotifuSpeech {
         return
     }
 
-    if ($Settings.voice.provider -eq "openai" -and (Invoke-NotifuOpenAITts -Text $Text -Settings $Settings)) {
-        return
-    }
-
     if ($Settings.voice.provider -eq "rvc") {
         if (Invoke-NotifuRvcSpeech -Text $Text -Settings $Settings) {
             return
@@ -1204,6 +1235,10 @@ function Invoke-NotifuSpeech {
             Write-NotifuLog -Level "warn" -Message "RVC-only voice is enabled; local fallback suppressed."
             return
         }
+    }
+
+    if ($Settings.voice.provider -eq "local" -and (Invoke-NotifuEdgeSpeech -Text $Text -Settings $Settings)) {
+        return
     }
 
     if ($Settings.voice.chimeBeforeSpeech) {

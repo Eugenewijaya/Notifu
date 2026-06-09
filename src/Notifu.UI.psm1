@@ -775,9 +775,8 @@ function Show-NotifuSettingsWindow {
     $provider = New-Object System.Windows.Forms.ComboBox
     $provider.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
     [void]$provider.Items.Add("local")
-    [void]$provider.Items.Add("openai")
     [void]$provider.Items.Add("rvc")
-    $provider.SelectedItem = [string]$settings.voice.provider
+    $provider.SelectedItem = if ([string]$settings.voice.provider -eq "rvc") { "rvc" } else { "local" }
     $provider.Location = New-Object System.Drawing.Point 190, 26
     $provider.Size = New-Object System.Drawing.Size 180, 24
     $voice.Controls.Add($provider)
@@ -803,7 +802,7 @@ function Show-NotifuSettingsWindow {
     $localVoice.Size = New-Object System.Drawing.Size 260, 24
     $voice.Controls.Add($localVoice)
 
-    [void](Add-Label $voice "OpenAI voice" 22 158)
+    [void](Add-Label $voice "Voice lama (nonaktif)" 22 158)
     $openAiVoice = Add-TextBox $voice $settings.voice.openAiVoice 190 156 180
 
     $chime = New-Object System.Windows.Forms.CheckBox
@@ -856,8 +855,9 @@ function Show-NotifuSettingsWindow {
     $rvc.Controls.Add($testRvc)
 
     $aiEnabled = New-Object System.Windows.Forms.CheckBox
-    $aiEnabled.Text = "Aktifkan AI cloud jika OPENAI_API_KEY tersedia"
-    $aiEnabled.Checked = [bool]$settings.ai.enabled
+    $aiEnabled.Text = "AI cloud dinonaktifkan: Notifu langsung membacakan pesan"
+    $aiEnabled.Checked = $false
+    $aiEnabled.Enabled = $false
     $aiEnabled.Location = New-Object System.Drawing.Point 22, 28
     $aiEnabled.Size = New-Object System.Drawing.Size 360, 26
     $ai.Controls.Add($aiEnabled)
@@ -866,7 +866,7 @@ function Show-NotifuSettingsWindow {
     $aiModel = Add-TextBox $ai $settings.ai.model 190 68 220
 
     $aiNote = New-Object System.Windows.Forms.Label
-    $aiNote.Text = "Kalau key belum ada, Notifu tetap jalan dengan dialog lokal dinamis. Isi .env.local untuk AI penuh."
+    $aiNote.Text = "Notifu menggunakan template lokal agar popup dan suara tidak menunggu respons jaringan."
     $aiNote.Location = New-Object System.Drawing.Point 22, 112
     $aiNote.Size = New-Object System.Drawing.Size 560, 52
     $ai.Controls.Add($aiNote)
@@ -954,7 +954,7 @@ function Show-NotifuSettingsWindow {
         $settings.rvc.command = $rvcCommand.Text
         $settings.rvc.baseVoice = $baseVoice.Text
         $settings.rvc.pitch = [int]$pitch.Value
-        $settings.ai.enabled = [bool]$aiEnabled.Checked
+        $settings.ai.enabled = $false
         $settings.ai.model = $aiModel.Text
         Save-NotifuSettings -Settings $settings -Path $SettingsPath
         [System.Windows.Forms.MessageBox]::Show("Settings saved. Restart Notifu untuk memastikan semua perubahan aktif.", "Notifu") | Out-Null

@@ -62,7 +62,7 @@ internal sealed class AppSettings
         Set(root, "ui", "popupDurationSeconds", settings.PopupDurationSeconds);
         Set(root, "ui", "enableDesktopPet", false);
         Set(root, "voice", "enabled", settings.VoiceEnabled);
-        Set(root, "ai", "enabled", settings.AiEnabled);
+        Set(root, "ai", "enabled", false);
         Set(root, "privacy", "readMessageBody", settings.ReadMessageBody);
         Set(root, "runtime", "startWithWindows", settings.StartWithWindows);
         Set(root, "notifications", "priorityAppNameContains",
