@@ -1,240 +1,177 @@
 # Notifu - Your Waifu Notification
 
-Notifu is a local Windows notification assistant with an anime-style desktop pet. It reads Windows toast notifications, turns them into short natural announcements, speaks them out loud, and shows a floating chat bubble that slides in from the right side of the screen.
+Notifu is an open-source, local-first Windows notification assistant. It watches
+Windows Notification Center, immediately slides a small anime cloud popup in from
+the right, changes expression based on the message, and reads the notification
+through a single voice queue.
 
 ![Notifu app icon](assets/notifu-app-icon.png)
 
-The current build is a PowerShell MVP so it can run on Windows without .NET SDK, Visual Studio Build Tools, or a packaged installer.
+## Highlights
 
-## Features
-
-- Reads Windows toast notifications through `UserNotificationListener`.
-- Supports all incoming notification apps by default, with allow/block list settings.
-- Shows a custom floating popup, not a normal Windows balloon notification.
-- Popup slides in from the right, uses typewriter text, and has cute chat-bubble styling.
-- Tiny full-body desktop pet walks at the bottom of the screen and can be dragged around.
-- Character expression changes by notification context: happy, talking, curious, focused, worried, sleepy.
-- Speaks announcements through a single speech queue so voices do not overlap.
-- Default voice mode is RVC-only with a user-supplied voice-conversion model.
-- Voice command is opt-in by button/menu click, not always-on microphone recording.
-- Voice commands use the wake phrase `halo notifu`.
-- AI mode can use OpenAI Responses API when the user provides an API key.
-- Local heuristic fallback still works without any cloud key.
-- Quick actions: open source app, copy draft reply, repeat announcement, pause/resume, dismiss bubble.
+- Native Windows `.exe` with a tray menu and standalone Settings window.
+- Instant cloud/chat popup with animated typewriter text and expressive anime head.
+- Prioritizes WhatsApp and browser notifications before lower-priority apps.
+- Reads all Windows notifications by default, with allow/block lists.
+- No permanent desktop pet or animation worker while idle.
+- One queued voice worker prevents overlapping speech.
+- Optional user-supplied RVC voice model and optional OpenAI analysis.
+- Per-user installer, Start Menu shortcut, startup registration, and uninstaller.
+- `Matikan Notifu` is available from tray and Settings.
 
 ## Privacy Promise
 
-Notifu is designed for local-first use.
+Notifu is designed to be inspectable and local-first.
 
-- The developer does not collect private user data.
-- There is no developer-operated telemetry server in this repo.
-- By default, notification processing happens locally on the user's machine.
-- Notifu only reads text that Windows already exposes in Notification Center.
-- It does not read WhatsApp databases, browser databases, private app storage, or encrypted message stores.
-- It does not send replies automatically. Draft replies are copied only when the user chooses.
-- Voice command listens only after the user clicks the voice button or tray menu.
-- OpenAI API calls happen only when the user adds their own `OPENAI_API_KEY`.
-- RVC model files are user-supplied and are not included in this repository.
+- The developer does **not** collect private user data or notification contents.
+- This repository has no developer-operated telemetry or analytics server.
+- Notifu only reads text exposed by Windows Notification Center.
+- Notifu does not read WhatsApp databases, browser databases, or encrypted storage.
+- Notification history is not stored by default.
+- Voice model files stay on the user's computer and are not included in releases.
+- OpenAI requests happen only after the user supplies their own API key and enables AI.
 
-For extra privacy, set:
-
-```json
-{
-  "privacy": {
-    "readMessageBody": false,
-    "storeHistory": false
-  }
-}
-```
+Review the source before installing. The notification, popup, settings, installer,
+and uninstaller implementations live under [`native/`](native/).
 
 ## Install
 
-Requirements:
+### Recommended: GitHub release
 
-- Windows 10/11
-- Windows PowerShell 5.1
-- Notification access allowed in Windows privacy settings
+1. Download `Notifu-Setup.exe` from the latest GitHub release.
+2. Open it and select **Install / Update**.
+3. Select **Jalankan Notifu**.
+4. Allow notification access when Windows asks.
 
-Clone and enter the project:
+Notifu installs for the current Windows user in:
 
-```powershell
-git clone https://github.com/Eugenewijaya/Notifu.git
-cd Notifu
+```text
+%LOCALAPPDATA%\Programs\Notifu
 ```
 
-Generate local image/icon assets if needed:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\build-assets.ps1
-```
-
-Install shortcuts and startup entry for the current Windows user:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
-```
-
-Run Notifu:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\run.ps1
-```
-
-Run with visible PowerShell window:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\run.ps1 -Visible
-```
-
-Open settings:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\settings.ps1
-```
-
-Uninstall shortcuts and startup entry:
+Uninstall from Windows **Installed apps**, Start Menu `Notifu.Uninstall.exe`, or:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\uninstall.ps1
 ```
 
-Fully stop Notifu and all speech/RVC workers:
+### Build from source
+
+Requirements:
+
+- Windows 10 version 1809 or newer / Windows 11
+- .NET 9 SDK
+- Windows PowerShell 5.1 only when using RVC voice
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\stop.ps1
+git clone https://github.com/Eugenewijaya/Notifu.git
+cd Notifu
+powershell -ExecutionPolicy Bypass -File .\scripts\build-release.ps1
+.\dist\Notifu-Setup.exe
 ```
 
-Notifu also provides `Matikan Notifu` in the tray menu and Settings window. Only one main Notifu instance can run at a time.
+The build script creates:
 
-## Test
-
-Check notification listener access and current Notification Center items:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\test-notifications.ps1 -All
+```text
+dist\Notifu-Setup.exe   distributable installer
+dist\app\Notifu.exe    unpacked native application
 ```
 
-Test only notifications tracked by Notifu settings:
+## Use
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\test-notifications.ps1
-```
+Right-click the Notifu tray icon to:
 
-Preview popup, desktop pet, and speech:
+- pause or resume notification handling;
+- test the cloud popup;
+- open standalone Settings;
+- open the runtime log;
+- fully stop Notifu.
 
-```powershell
-powershell -ExecutionPolicy Bypass -STA -File .\scripts\test-popup.ps1
-```
-
-Test RVC/fallback voice:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\test-rvc.ps1
-```
+Double-click the tray icon to open Settings. WhatsApp, Chrome, Microsoft Edge,
+Firefox, Brave, and Opera are prioritized by default.
 
 ## Configuration
 
-Main settings live in:
-
-```text
-config/notifu.settings.json
-```
-
-Read every notification except blocked apps:
+Settings are stored in `config/notifu.settings.json`. Important defaults:
 
 ```json
 {
+  "listener": {
+    "pollMilliseconds": 1000
+  },
   "notifications": {
     "mode": "all",
+    "priorityAppNameContains": [
+      "WhatsApp",
+      "Chrome",
+      "Microsoft Edge",
+      "Firefox",
+      "Brave",
+      "Opera"
+    ],
     "blockAppNameContains": ["Notifu"]
+  },
+  "privacy": {
+    "readMessageBody": true,
+    "storeHistory": false
+  },
+  "ui": {
+    "enableDesktopPet": false
   }
 }
 ```
 
-Read only specific apps:
+Turn off **Bacakan isi pesan** in Settings when notification bodies should remain
+hidden. Set notification mode to `allowlist` to process only selected apps.
 
-```json
-{
-  "notifications": {
-    "mode": "allowlist",
-    "allowAppNameContains": ["WhatsApp", "Telegram", "Discord", "Slack"]
-  }
-}
+## Voice
+
+Notifu shows the popup before starting voice work. Voice runs through one queue,
+so two notifications cannot talk over each other.
+
+The repository supports a user-supplied RVC model through
+`config/notifu.settings.json`. Put personal model files under the ignored `models/`
+folder or use an absolute local path. Installer updates preserve the user's existing
+settings. RVC/Python can use substantial RAM while generating audio, but it is not
+kept alive while Notifu is idle. Model files are never committed or distributed.
+
+## Test And Development
+
+```powershell
+# Build both native projects
+.\.dotnet-sdk\dotnet.exe build .\Notifu.sln -c Release
+
+# Preview the native cloud popup
+.\dist\app\Notifu.exe --test-popup
+
+# Open native Settings
+.\dist\app\Notifu.exe --settings
+
+# Fully stop native and legacy workers
+powershell -ExecutionPolicy Bypass -File .\scripts\stop.ps1
 ```
 
-## AI And Voice
-
-Without an API key, Notifu uses local rules. The default voice provider is `rvc`, and `rvcOnly` suppresses local voice fallback so the app does not suddenly switch to a different speaker.
-
-To enable cloud AI and natural TTS, create `.env.local` in the project root:
-
-```text
-OPENAI_API_KEY=your_key_here
-```
-
-Then choose a provider in settings:
-
-```json
-{
-  "voice": {
-    "provider": "openai"
-  }
-}
-```
-
-For RVC, provide your own `.pth` and `.index` model paths in `config/notifu.settings.json`. Model files are intentionally not committed.
-
-## Voice Commands
-
-Click the tray menu item `Dengarkan voice command`, then start with:
-
-```text
-halo notifu
-```
-
-Supported local commands:
-
-```text
-halo notifu hide
-halo notifu show
-halo notifu off
-halo notifu on
-halo notifu status
-halo notifu ulangi
-halo notifu buka
-halo notifu salin
-halo notifu pause
-halo notifu resume
-```
-
-The desktop pet itself does not start voice command. Drag it with the mouse to move it.
+See [the performance audit](docs/PERFORMANCE_AUDIT.md) for the measured bottlenecks
+and architecture changes.
 
 ## Project Structure
 
 ```text
-assets/                 Mascot, expression, icon, and QRIS support images
-config/                 User-editable app settings
-docs/                   PRD and implementation notes
-scripts/                Install, run, test, speech, RVC, and asset scripts
-src/                    PowerShell app, core logic, and WinForms UI
+native/Notifu.App/      Native tray runtime, popup, priority listener, settings
+native/Notifu.Setup/    Installer and Apps & Features uninstaller
+assets/                 App icon, expressions, and QRIS support poster
+config/                 User-editable settings
+scripts/                Release build, RVC speech, and fallback utilities
+src/                    Legacy PowerShell runtime kept as a fallback
+docs/                   Product notes and performance audit
 ```
 
 ## Support Developer
 
-Support the developer through the official QRIS poster below:
+Support development through the official QRIS poster below. Always verify the
+merchant name in your payment application before paying.
 
 ![Notifu support QRIS](assets/support-qris.png)
-
-Always verify the merchant name in your payment app before paying.
-
-## Roadmap
-
-- Native Windows app package.
-- Better speech recognition for Indonesian voice commands.
-- Reminder queue and quiet hours.
-- Per-app notification rules.
-- Safer draft-reply workflow per chat app.
-- Higher-quality Live2D/Spine-style character animation.
 
 ## License
 

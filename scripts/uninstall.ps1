@@ -4,6 +4,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$nativeUninstaller = Join-Path $env:LOCALAPPDATA "Programs\Notifu\Notifu.Uninstall.exe"
+if (Test-Path -LiteralPath $nativeUninstaller) {
+    Start-Process -FilePath $nativeUninstaller -ArgumentList "--uninstall"
+    return
+}
 
 & (Join-Path $root "scripts\stop.ps1") -Silent
 & (Join-Path $root "scripts\uninstall-startup.ps1") -Silent

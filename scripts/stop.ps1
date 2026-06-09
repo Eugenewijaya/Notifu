@@ -6,6 +6,17 @@ param(
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $currentProcessId = $PID
+$nativeCandidates = @(
+    (Join-Path $env:LOCALAPPDATA "Programs\Notifu\Notifu.exe"),
+    (Join-Path $root "dist\app\Notifu.exe")
+)
+foreach ($native in $nativeCandidates) {
+    if (Test-Path -LiteralPath $native) {
+        try {
+            Start-Process -FilePath $native -ArgumentList "--shutdown" -WindowStyle Hidden -Wait
+        } catch {}
+    }
+}
 
 function Test-ContainsIgnoreCase {
     param(

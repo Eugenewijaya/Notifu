@@ -448,6 +448,13 @@ function Invoke-NotifuRvcSpeech {
     $indexPath = [string](Get-NotifuObjectValue -Object $rvcSettings -Name "indexPath" -Default "")
     $commandOverride = [string](Get-NotifuObjectValue -Object $rvcSettings -Name "command" -Default "")
 
+    if ($modelPath -and -not [System.IO.Path]::IsPathRooted($modelPath)) {
+        $modelPath = Resolve-NotifuWorkspacePath -Path $modelPath
+    }
+    if ($indexPath -and -not [System.IO.Path]::IsPathRooted($indexPath)) {
+        $indexPath = Resolve-NotifuWorkspacePath -Path $indexPath
+    }
+
     if (-not (Test-Path -LiteralPath $modelPath)) {
         Write-NotifuLog -Level "warn" -Message "RVC model not found: $modelPath"
         return $false

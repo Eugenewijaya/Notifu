@@ -5,3 +5,10 @@ logs/
 .venv-rvc/
 tools/python*/
 tools/*.exe
+.dotnet-sdk/
+native/**/bin/
+native/**/obj/
+native/Notifu.Setup/Payload/
+dist/
+*.csproj.user
+models/
